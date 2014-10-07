@@ -1,76 +1,87 @@
 define(function(require, exports, module){
     'use strict'
     
-    var Tip, Widget, tpl, styles;
+    var Tip, Widget, Events;
     
-    tpl = require('./tip.tpl');
     Widget = require('widget');
-    styles = require('./tip.styles');
     
     Tip = Widget.extend({
         attrs : {
             delay : 70,
-            styles : styles,
+            distance : 8,
             trigger : null,
-            template : tpl,
-            triggerType : 'hover'
+            content : null,
+            direction : 'up',
+            triggerType : 'hover',
+            styles : require('./tip.styles'),
+            template : require('./tip.tpl')
         },
         init : function(){
-            var trigger = this.get('trigger');
+            var trigger, triggerType;
     
-            if(trigger){
-                this['_bind' + capitalize(this.get('triggerType'))](trigger);
+            if((trigger = this.get('trigger')) && (triggerType = this.get('triggerType'))){
+                Events[triggerType](this, trigger);
             }
     
-            console.log(this.element.html())
+            this.render();
         },
-        _bindClick : function(trigger){
-            var ctx = this;
+        _onRenderContent : function(val){
+            this.element.find('[data-id="content"]').html(val);
+        }
+    });
     
+    Events = {
+        'click' : function(ctx, trigger){
             trigger.on('click', function(){
                 ctx[(trigger._active = !trigger._active) ? show : hide]();
             });
         },
-        _bindFocus : function(trigger){
-            var ctx = this;
+        'hover' : function(ctx, trigger){
+            var timer;
     
             trigger.on({
-                'focus' : function(){
+                'mouseenter' : function(){
+                    clearTimeout(timer);
                     ctx.show();
                 },
-                'blur' : function(){
-                    setTimeout(function(){
-                        (!ctx._downOnElement) && ctx.hide();
-                        ctx._downOnElement = false;
-                    }, ctx.get('delay'));
+                'mouseleave' : function(){
+                    mouseleave();
                 }
             });
     
             ctx.delegateEvents({
-                'mousedown' : function(){
-                    this._downOnElement = true;
-                }
-            });
-        },
-        _bindHover : function(trigger){
-            var ctx = this;
-    
-            trigger.on({
                 'mouseenter' : function(){
-                    ctx.show();
+                    clearTimeout(timer);
                 },
                 'mouseleave' : function(){
-                    ctx.hide();
+                    mouseleave();
                 }
-            })
+            });
+    
+            function mouseleave(){
+                timer = setTimeout(function(){
+                    ctx.hide();
+                }, ctx.get('delay'));
+            }
         },
-        _onChangeContent : function(val){
+        'focus' : function(ctx, trigger){
+            trigger.on('focus', function(){
+                ctx.show();
+            });
     
+            trigger.on('blur', function(){
+                setTimeout(function(){
+                    (!ctx._downOnElement) && ctx.hide();
+                    ctx._downOnElement = false;
+                }, ctx.get('delay'));
+            });
+    
+            ctx.delegateEvents({
+                'mousedown' : function(){
+                    ctx._downOnElement = true;
+                }
+            });
         }
-    });
-    
-    function capitalize(val){
-        return val.charAt(0).toUpperCase() + val.slice(1);
     };
     
     module.exports = Tip;
