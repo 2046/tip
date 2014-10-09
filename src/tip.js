@@ -11,37 +11,58 @@ Tip = Widget.extend({
         trigger : null,
         content : null,
         arrowSize : 6,
-        direction : 'right',
-        arrowBorder : 'red',
-        arrowInside : 'black',
-        triggerType : 'hover',
+        direction : 'left',
+        triggerType : 'click',
+        arrowBorderBg : 'red',
+        arrowInsideBg : 'black',
         template : require('./tip.tpl'),
         styles : require('./tip.styles')
     },
     init : function(){
         if(this.get('trigger')){
+            this._originDirection = this.get('direction');
             this['_on' + capitalize(this.get('triggerType'))]();
             this.render();
         }
     },
+    show : function(){
+        this.set('direction', this._originDirection, {silent : true}).trigger('change:direction');
+        Tip.superclass.show.call(this);
+    },
     _onRenderContent : function(val){
         this.$('[data-id="content"]').html(val);
     },
+    _onRenderDirection : function(val){
+        var trigger, offset, css, elWidth, elHeight;
+
+        if(!this.rendered){
+            return;
+        }
+
+        trigger = this.get('trigger');
+        offset = trigger.offset();
+        elWidth = this.element.width();
+        elHeight = this.element.height();
+
+        css = fixedPosition(this, offset.left, offset.top, trigger.width() + offset.left, trigger.height() + offset.top, elWidth, elHeight, getDistanceVisualWindow(trigger));
+
+        if(!css){
+            return;
+        }
+
+        this.element.css(css.pos);
+        this.$('.widget-tip-arrow').css(css.arrow);
+        this.$('.widget-tip-arrow em').css(css.arrowBorder);
+        this.$('.widget-tip-arrow span').css(css.arrowInside);
+    },
     _onClick : function(){
-        var ctx, trigger, action;
+        var ctx, trigger;
 
         ctx = this;
         trigger = this.get('trigger');
 
         trigger.on('click', function(){
-            action = 'hide';
-
-            if(trigger._active = !trigger._active){
-                fixedPosition(ctx);
-                action = 'show';
-            }
-
-            ctx[action]();
+            ctx[(ctx._active = !ctx._active) ? 'show' : 'hide']();
         });
     },
     _onHover : function(){
@@ -52,7 +73,6 @@ Tip = Widget.extend({
 
         trigger.hover(function(){
             clearTimeout(timer);
-            fixedPosition(ctx);
             ctx.show();
         }, function(){
             mouseleave();
@@ -80,7 +100,6 @@ Tip = Widget.extend({
         trigger = this.get('trigger');
 
         trigger.on('focus', function(){
-            fixedPosition(ctx);
             ctx.show();
         });
 
@@ -99,28 +118,22 @@ Tip = Widget.extend({
     }
 });
 
-function fixedPosition(ctx){
-    var trigger, distance, width, height, offset, css, arrowSize, arrowBorder, arrowInside, elWidth, elHeight, docWidth, docHeight, scrollTop;
+function fixedPosition(ctx, x1, y1, x2, y2, elWidth, elHeight, gap){
+    var css, vars, width, height, distance, arrowSize, arrowBorderBg, arrowInsideBg, left, top, offsets, direction, $win;
 
-    trigger = ctx.get('trigger');
+    offsets = [];
+    offsets[0] = 15;
+    width = x2 - x1;
+    height = y2 - y1;
+    $win = $(window);
     distance = ctx.get('distance');
+    direction = ctx.get('direction');
     arrowSize = ctx.get('arrowSize');
-    arrowBorder = ctx.get('arrowBorder');
-    arrowInside = ctx.get('arrowInside');
-    width = trigger.width();
-    height = trigger.height();
-    offset = trigger.offset();
-    elWidth = ctx.element.width();
-    elHeight = ctx.element.height();
-    docWidth = $(window).outerWidth();
-    scrollTop = $(window).scrollTop();
-    docHeight = scrollTop + $(window).outerHeight();
+    arrowBorderBg = ctx.get('arrowBorderBg');
+    arrowInsideBg = ctx.get('arrowInsideBg');
 
     css = {
-        pos : {
-            top : offset.top,
-            left : offset.left
-        },
+        pos : {},
         arrow : {},
         arrowBorder : {
             top : 0,
@@ -130,77 +143,108 @@ function fixedPosition(ctx){
         arrowInside : {
             borderWidth : arrowSize
         }
+    };
+
+    if(direction == 'up' || direction == 'down'){
+        offsets[1] = width / 2 - arrowSize - offsets[0];
+        left = x1 + offsets[1];
+    }else if(direction == 'left' || direction == 'right'){
+        offsets[1] = height / 2 - arrowSize - offsets[0];
+        top = y1 + offsets[1];
     }
 
-    switch (ctx.get('direction')) {
+    switch (direction) {
         case 'up':
-            css.pos.top = offset.top - distance - elHeight;
-            css.pos.left = offset.left + (width / 2 - arrowSize - 15);
-
-            if(css.pos.top < scrollTop){
+            if(elHeight > gap.top && elHeight < gap.bottom){
                 ctx.set('direction', 'down');
-                fixedPosition(ctx);
-                return;
+                return false;
             }
 
-            css.arrow.left = 15;
+            top = y1 - distance - elHeight;
+            css.arrow.left = offsets[0];
             css.arrow.bottom = 0;
+            css.arrow.top = 'auto';
             css.arrowBorder.top = 1;
-            css.arrowBorder.borderBottomWidth = 0;
-            css.arrowInside.borderBottomWidth = 0;
-            css.arrowBorder.borderTopColor = arrowBorder;
-            css.arrowInside.borderTopColor = arrowInside;
+            vars = ['Bottom', 'Top'];
             break;
         case 'down':
-            css.pos.top = offset.top + height + distance;
-            css.pos.left = offset.left + (width / 2 - arrowSize - 15);
-
-            if(css.pos.top + elHeight > docHeight){
+            if(elHeight > gap.bottom && elHeight < gap.top){
                 ctx.set('direction', 'up');
-                fixedPosition(ctx);
-                return;
+                return false;
             }
 
+            top = y2 + distance;
+            css.arrow.left = offsets[0];
             css.arrow.top = -arrowSize;
-            css.arrow.left = 15;
             css.arrowBorder.top = -1;
-            css.arrowBorder.borderTopWidth = 0;
-            css.arrowInside.borderTopWidth = 0;
-            css.arrowBorder.borderBottomColor = arrowBorder;
-            css.arrowInside.borderBottomColor = arrowInside;
+            vars = ['Top', 'Bottom'];
             break;
         case 'left':
-            css.pos.left = offset.left - distance- elWidth;
-            css.pos.top = offset.top + (height / 2 - arrowSize - 15);
-            css.arrow.top = 15;
+            if(elWidth > gap.left && elWidth < gap.right){
+                ctx.set('direction', 'right');
+                return false;
+            }
+
+            left = x1 - distance - elWidth;
+            css.arrow.top = offsets[0];
             css.arrow.right = 0;
+            css.arrow.left = 'auto';
             css.arrowBorder.left = 1;
-            css.arrowBorder.borderRightWidth = 0;
-            css.arrowInside.borderRightWidth = 0;
-            css.arrowBorder.borderLeftColor = arrowBorder;
-            css.arrowInside.borderLeftColor = arrowInside;
+            vars = ['Right', 'Left'];
             break;
         case 'right':
-            css.pos.left = offset.left + width + distance;
-            css.pos.top = offset.top + (height / 2 - arrowSize - 15);
-            css.arrow.top = 15;
+            if(elWidth > gap.right && elWidth < gap.left){
+                ctx.set('direction', 'left');
+                return false;
+            }
+
+            left = x2 + distance;
+            css.arrow.top = offsets[0];
             css.arrow.left = -arrowSize;
             css.arrowBorder.left = -1;
-            css.arrowBorder.borderLeftWidth = 0;
-            css.arrowInside.borderLeftWidth = 0;
-            css.arrowBorder.borderRightColor = arrowBorder;
-            css.arrowInside.borderRightColor = arrowInside;
+            vars = ['Left', 'Right'];
             break;
+    };
+
+    if(direction == 'up' || direction == 'down'){
+        if(left + elWidth > $win.width()){
+            left = x1 - (elWidth - width) - offsets[1];
+            css.arrow.left = offsets[0] + (elWidth - width) + offsets[1] + offsets[1];
+        }
+    }else if(direction == 'left' || direction == 'right'){
+        if(top + elHeight > $win.height() + $win.scrollTop()){
+            top = y1 - (elHeight - height) - offsets[1];
+            css.arrow.top = offsets[0] + (elHeight - height) + offsets[1] + offsets[1];
+        }
     }
 
-    ctx.element.css(css.pos);
-    ctx.$('.widget-tip-arrow').css(css.arrow);
-    ctx.$('.widget-tip-arrow em').css(css.arrowBorder);
-    ctx.$('.widget-tip-arrow span').css(css.arrowInside);
+    css.pos.top = top;
+    css.pos.left = left;
+    css.arrowBorder['border' + vars[0] + 'Width'] = 0;
+    css.arrowInside['border' + vars[0] + 'Width'] = 0;
+    css.arrowBorder['border' + vars[1] + 'Color'] = arrowBorderBg;
+    css.arrowInside['border' + vars[1] + 'Color'] = arrowInsideBg;
+
+    return css;
 };
 
 function capitalize(val){
     return val.charAt(0).toUpperCase() + val.slice(1);
+};
+
+function getDistanceVisualWindow(trigger){
+    var win, offset, top;
+
+    win = $(window);
+    offset = trigger.offset();
+    top = offset.top - win.scrollTop();
+
+    return {
+        top : top,
+        left : offset.left,
+        bottom : win.height() - top - trigger.height(),
+        right : win.width() - offset.left - trigger.width()
+    };
 };
 
 module.exports = Tip;
