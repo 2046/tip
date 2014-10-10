@@ -10,3 +10,6 @@
 [submodule "lib/widget"]
 	path = lib/widget
 	url = git@github.com:2046/widget.git
+[submodule "lib/overlay"]
+	path = lib/overlay
+	url = git@github.com:2046/overlay.git
