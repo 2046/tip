@@ -12,18 +12,91 @@
             background-color: red;
         }
 
-        .widget-tip-arrow em{
-            border-color: rgba(255,255,255,0);
+        .widget-tip-arrow{
+            position: absolute;
+        }
+
+        .widget-tip-arrow em,
+        .widget-tip-arrow span{
+            position: absolute;
+            top: 0;
+            left : 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            border-style: solid;
+            border: 6px solid transparent;
             border-color: transparent\0;
             _border-color: tomato;
             _filter: chroma(color=tomato);
         }
 
-        .widget-tip-arrow span{
-            border-color: rgba(255,255,255,0);
-            border-color: transparent\0;
-            _border-color: tomato;
-            _filter: chroma(color=tomato);
+        .widget-tip .up{
+            bottom: 0;
+            left: 15px;
+        }
+
+        .widget-tip .right{
+            top: 15px;
+            left: -6px;
+        }
+
+        .widget-tip .down{
+            top: -6px;
+            left: 15px;
+        }
+
+        .widget-tip .left{
+            top: 15px;
+            right: 0;
+        }
+
+        .widget-tip .up em{
+            top: 1px;
+            left: 0;
+            border-bottom-width: 0;
+            border-top-color: red;
+        }
+
+        .widget-tip .right em{
+            top: 0;
+            left: -1px;
+            border-left-width: 0;
+            border-right-color: red;
+        }
+
+        .widget-tip .down em{
+            top: -1px;
+            left: 0;
+            border-top-width: 0;
+            border-bottom-color: red;
+        }
+
+        .widget-tip .left em{
+            top: 0;
+            left: 1px;
+            border-right-width: 0;
+            border-left-color: red;
+        }
+
+        .widget-tip .up span{
+            border-bottom-width: 0;
+            border-top-color: black;
+        }
+
+        .widget-tip .right span{
+            border-left-width: 0;
+            border-right-color: black;
+        }
+
+        .widget-tip .down span{
+            border-top-width: 0;
+            border-bottom-color: black;
+        }
+
+        .widget-tip .left span{
+            border-right-width: 0;
+            border-left-color: black;
         }
     </style>
 </head>
@@ -40,6 +113,7 @@
                 'events' : 'lib/events/dist/events.js',
                 'base' : 'lib/base/dist/base.js',
                 'widget' : 'lib/widget/dist/widget.js',
+                'overlay' : 'lib/overlay/dist/overlay.js',
                 'tip' : 'dist/tip.js'
             }
         });

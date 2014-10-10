@@ -15,6 +15,7 @@ define(function(require, exports, module){
         var div = $('<div style="width:100px;margin: 300px;height:500px;background-color:red;"/>').appendTo(document.body);
 
         it('normal usage', function(){
+
             new Tip({
                 trigger : div,
                 direction : 'right',
