@@ -7,9 +7,7 @@ Overlay = require('overlay');
 
 Tip = Overlay.extend({
     attrs : {
-        delay : 100,
         distance : 10,
-        trigger : null,
         content : null,
         arrowOffset : 15,
         direction : 'right',
@@ -20,11 +18,15 @@ Tip = Overlay.extend({
         }
     },
     init : function(){
-        this._arrow = this.$('.widget-tip-arrow').css('position', 'absolute');
+        Tip.superclass.init.call(this);
         this._originDirection = this.get('direction');
-        this['_on' + capitalize(this.get('triggerType'))]();
+        this._arrow = this.$('.widget-tip-arrow').css('position', 'absolute');
         this.render();
+    },
+    render : function(){
+        Tip.superclass.render.call(this);
         this.set('arrowSize', getArrowSize(this._arrow.find('em')));
+        return this;
     },
     show : function(){
         this.set('direction', this._originDirection, {
@@ -62,67 +64,6 @@ Tip = Overlay.extend({
         }
 
         pin(this, trigger, direction, width, height);
-    },
-    _onClick : function(){
-        var ctx, trigger;
-
-        ctx = this;
-        trigger = this.get('trigger');
-
-        trigger.on('click', function(){
-            ctx[(ctx._active = !ctx._active) ? 'show' : 'hide']();
-        });
-    },
-    _onHover : function(){
-        var ctx, trigger, timer;
-
-        ctx = this;
-        trigger = this.get('trigger');
-
-        trigger.hover(function(){
-            clearTimeout(timer);
-            ctx.show();
-        }, function(){
-            mouseleave();
-        });
-
-        ctx.delegateEvents({
-            'mouseenter' : function(){
-                clearTimeout(timer);
-            },
-            'mouseleave' : function(){
-                mouseleave();
-            }
-        });
-
-        function mouseleave(){
-            timer = setTimeout(function(){
-                ctx.hide();
-            }, ctx.get('delay'));
-        };
-    },
-    _onFocus : function(){
-        var ctx, trigger;
-
-        ctx = this;
-        trigger = this.get('trigger');
-
-        trigger.on('focus', function(){
-            ctx.show();
-        });
-
-        trigger.on('blur', function(){
-            setTimeout(function(){
-                (!ctx._downOnElement) && ctx.hide();
-                ctx._downOnElement = false;
-            }, ctx.get('delay'));
-        });
-
-        ctx.delegateEvents({
-            'mousedown' : function(){
-                ctx._downOnElement = true;
-            }
-        });
     }
 });
 
@@ -197,9 +138,9 @@ function getArrowCoords(ctx, direction){
 
     arrow = {
         top : null,
+        left : null,
         right : null,
-        bottom : null,
-        left : null
+        bottom : null
     };
     arrowSize = ctx.get('arrowSize');
     arrowOffset = ctx.get('arrowOffset');
@@ -268,10 +209,6 @@ function getArrowSize(arrow){
             return tmp;
         }
     }
-};
-
-function capitalize(val){
-    return val.charAt(0).toUpperCase() + val.slice(1);
 };
 
 module.exports = Tip;
