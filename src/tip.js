@@ -1,7 +1,8 @@
 'use strict'
 
-var Tip, Overlay;
+var Tip, Overlay, $win;
 
+$win = $(window);
 Overlay = require('overlay');
 
 Tip = Overlay.extend({
@@ -10,19 +11,20 @@ Tip = Overlay.extend({
         distance : 10,
         trigger : null,
         content : null,
-        direction : 'left',
-        triggerType : 'click',
+        arrowOffset : 15,
+        direction : 'right',
+        triggerType : 'hover',
         template : require('./tip.tpl'),
         style : {
-            display : 'none',
             position : 'absolute'
         }
     },
     init : function(){
-        this._arrow = this.$('.widget-tip-arrow');
+        this._arrow = this.$('.widget-tip-arrow').css('position', 'absolute');
         this._originDirection = this.get('direction');
         this['_on' + capitalize(this.get('triggerType'))]();
         this.render();
+        this.set('arrowSize', getArrowSize(this._arrow.find('em')));
     },
     show : function(){
         this.set('direction', this._originDirection, {
@@ -31,26 +33,35 @@ Tip = Overlay.extend({
         Tip.superclass.show.call(this);
     },
     _onRenderContent : function(val){
+        if(typeof val !== 'string'){
+            val = val.call(this);
+        }
+
         this.$('[data-id="content"]').html(val);
     },
+    _onRenderWidth : function(val){
+        this.$('[data-id="content"]').css('width', val);
+    },
+    _onRenderHeight : function(val){
+        this.$('[data-id="content"]').css('height', val);
+    },
     _onRenderDirection : function(val){
-        var trigger, offset, width, height, direction;
+        var trigger, width, height, direction;
 
         if(!this.rendered){
             return;
         }
 
-        trigger = this.get('trigger');
-        offset = trigger.offset();
         width = this.element.width();
         height = this.element.height();
+        trigger = this.get('trigger');
         direction = this.get('direction');
 
         if(isOverflow(this, trigger, direction, width, height)){
             return;
         }
 
-        fixedPosition(this, offset.left, offset.top, trigger.width() + offset.left, trigger.height() + offset.top, width, height);
+        pin(this, trigger, direction, width, height);
     },
     _onClick : function(){
         var ctx, trigger;
@@ -115,65 +126,99 @@ Tip = Overlay.extend({
     }
 });
 
-function fixedPosition(ctx, x1, y1, x2, y2, elWidth, elHeight){
-    var arrow, width, height, distance, arrowSize, left, top, offsets, direction, $win;
+function pin(ctx, trigger, direction, elWidth, elHeight){
+    var coords, pinCoords, arrowCoords;
 
-    arrow = {};
-    offsets = [];
-    offsets[0] = 15;
-    width = x2 - x1;
-    height = y2 - y1;
-    $win = $(window);
-    distance = ctx.get('distance');
-    direction = ctx.get('direction');
-    arrowSize = getArrowSize(ctx._arrow.find('em'));
+    coords = {
+        x1 : trigger.offset().left,
+        y1 : trigger.offset().top
+    };
+
+    coords.x2 = coords.x1 + trigger.width();
+    coords.y2 = coords.y1 + trigger.height();
+
+    arrowCoords = getArrowCoords(ctx, direction);
+    pinCoords = getPinCoords(ctx, direction, coords, elWidth, elHeight, arrowCoords);
+
+    ctx.element.css(pinCoords);
+    ctx._arrow.removeClass('up down left right').addClass(direction).css(arrowCoords);
+};
+
+function getPinCoords(ctx, direction, coords, elWidth, elHeight, arrowCoords){
+    var distance, width, height, arrowOffset, offset, top, left;
+
+    width = coords.x2 - coords.x1;
+    height = coords.y2 - coords.y1;
+    distance= ctx.get('distance');
+    arrowOffset = ctx.get('arrowOffset');
 
     if(direction == 'up' || direction == 'down'){
-        offsets[1] = width / 2 - arrowSize - offsets[0];
-        left = x1 + offsets[1];
+        offset = width;
     }else if(direction == 'left' || direction == 'right'){
-        offsets[1] = height / 2 - arrowSize - offsets[0];
-        top = y1 + offsets[1];
+        offset = height;
     }
 
+    offset = offset / 2 - ctx.get('arrowSize') - arrowOffset;
+
     if(direction == 'up'){
-        top = y1 - distance - elHeight;
-        arrow.left = offsets[0];
-        arrow.bottom = 0;
-        arrow.top = 'auto';
+        top = coords.y1 - distance - elHeight;
+        left = coords.x1 + offset;
     }else if(direction == 'down'){
-        top = y2 + distance;
-        arrow.left = offsets[0];
-        arrow.top = -arrowSize;
+        top = coords.y2 + distance;
+        left = coords.x1 + offset;
     }else if(direction == 'left'){
-        left = x1 - distance - elWidth;
-        arrow.top = offsets[0];
-        arrow.right = 0;
-        arrow.left = 'auto';
+        top = coords.y1 + offset;
+        left = coords.x1 - distance - elWidth;
     }else if(direction == 'right'){
-        left = x2 + distance;
-        arrow.top = offsets[0];
-        arrow.left = -arrowSize;
+        top = coords.y1 + offset;
+        left = coords.x2 + distance;
     }
 
     if(direction == 'up' || direction == 'down'){
         if(left + elWidth > $win.width()){
-            left = x1 - (elWidth - width) - offsets[1];
-            arrow.left = offsets[0] + (elWidth - width) + offsets[1] + offsets[1];
+            left = coords.x1 - (elWidth - width) - offset;
+            arrowCoords.left = arrowOffset + (elWidth - width) + offset + offset;
         }
     }else if(direction == 'left' || direction == 'right'){
-        if(top + elHeight > $win.height() + $win.scrollTop()){
-            top = y1 - (elHeight - height) - offsets[1];
-            arrow.top = offsets[0] + (elHeight - height) + offsets[1] + offsets[1];
-        }
+         if(top + elHeight > $win.height() + $win.scrollTop()){
+            top = coords.y1 - (elHeight - height) - offset;
+            arrowCoords.top = arrowOffset + (elHeight - height) + offset + offset;
+         }
     }
 
-    ctx.element.css({
+    return {
         top : top,
         left : left
-    });
+    }
+};
 
-    ctx._arrow.removeClass('up down left right').addClass(direction).css(arrow);
+function getArrowCoords(ctx, direction){
+    var arrow, arrowOffset, arrowSize;
+
+    arrow = {
+        top : null,
+        right : null,
+        bottom : null,
+        left : null
+    };
+    arrowSize = ctx.get('arrowSize');
+    arrowOffset = ctx.get('arrowOffset');
+
+    if(direction == 'up'){
+        arrow.left = arrowOffset;
+        arrow.bottom = 0;
+    }else if(direction == 'down'){
+        arrow.left = arrowOffset;
+        arrow.top = -arrowSize;
+    }else if(direction == 'left'){
+        arrow.top = arrowOffset;
+        arrow.right = 0;
+    }else if(direction == 'right'){
+        arrow.top = arrowOffset;
+        arrow.left = -arrowSize;
+    }
+
+    return arrow;
 };
 
 function isOverflow(ctx, trigger, direction, width, height){
@@ -197,27 +242,29 @@ function isOverflow(ctx, trigger, direction, width, height){
 };
 
 function getDistanceVisualWindow(trigger){
-    var win, offset, top;
+    var offset, top;
 
-    win = $(window);
     offset = trigger.offset();
-    top = offset.top - win.scrollTop();
+    top = offset.top - $win.scrollTop();
 
     return {
         top : top,
         left : offset.left,
-        bottom : win.height() - top - trigger.height(),
-        right : win.width() - offset.left - trigger.width()
+        bottom : $win.height() - top - trigger.height(),
+        right : $win.width() - offset.left - trigger.width()
     };
 };
 
 function getArrowSize(arrow){
-    var index, len, widths, tmp;
+    var index, len, borderWidth, tmp;
 
-    widths = arrow.css('borderWidth').split(' ');
+    borderWidth = [];
+    $(['Top', 'Right', 'Bottom', 'Left']).each(function(i, item){
+        borderWidth.push(arrow.css('border' + item + 'Width'));
+    });
 
-    for(index = 0, len = widths.length; index < len; index++){
-        if((tmp = parseInt(widths[index], 10)) != 0){
+    for(index = 0, len = borderWidth.length; index < len; index++){
+        if((tmp = parseInt(borderWidth[index], 10)) !== 0){
             return tmp;
         }
     }
