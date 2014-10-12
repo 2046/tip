@@ -17,8 +17,8 @@ Tip = Overlay.extend({
             position : 'absolute'
         }
     },
-    init : function(){
-        Tip.superclass.init.call(this);
+    setup : function(){
+        Tip.superclass.setup.call(this);
         this._originDirection = this.get('direction');
         this._arrow = this.$('.widget-tip-arrow').css('position', 'absolute');
         this.render();
