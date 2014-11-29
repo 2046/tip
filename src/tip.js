@@ -62,8 +62,16 @@ Tip = Overlay.extend({
         if(isOverflow(this, trigger, direction, width, height)){
             return;
         }
-
-        pin(this, trigger, direction, width, height);
+        
+        if(this.isResize){
+            pin(this, trigger, direction, width, height);
+        }else{
+            this.isResize = true;
+            
+            $(window).on('resize.tip', function(){
+                pin(ctx, trigger, direction, width, height);
+            }).trigger('resize.tip');
+        }
     }
 });
 
