@@ -48,7 +48,9 @@ Tip = Overlay.extend({
         this.$('[data-id="content"]').css('height', val);
     },
     _onRenderDirection : function(val){
-        var trigger, width, height, direction;
+        var trigger, width, height, direction, ctx;
+        
+        ctx = this;
 
         if(!this.rendered){
             return;
