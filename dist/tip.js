@@ -49,7 +49,9 @@ define(function(require, exports, module){
             this.$('[data-id="content"]').css('height', val);
         },
         _onRenderDirection : function(val){
-            var trigger, width, height, direction;
+            var trigger, width, height, direction， ctx;
+            
+            ctx = this;
     
             if(!this.rendered){
                 return;
@@ -64,7 +66,15 @@ define(function(require, exports, module){
                 return;
             }
     
-            pin(this, trigger, direction, width, height);
+            if(this.isResize){
+                pin(this, trigger, direction, width, height);
+            }else{
+                this.isResize = true;
+                
+                $(window).on('resize.tip', function(){
+                    pin(ctx, trigger, direction, width, height);
+                }).trigger('resize.tip');
+            }
         }
     });
     
